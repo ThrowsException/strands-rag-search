@@ -18,7 +18,7 @@ agent = Agent(model=ollama_model, system_prompt="You are an expert marketer writ
 
 # Use the agent
 
-users_prompt = "Show me information on healthcare plans for families"
+users_prompt = "What healthcare plans are available for me and my family? Im also a small business owner as well"
 collection = chroma_client.get_collection("html_documents")
 context = collection.query(
     query_texts=[users_prompt],
