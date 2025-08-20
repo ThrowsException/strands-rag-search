@@ -1,0 +1,15 @@
+[project]
+name = "open-rag-search"
+version = "0.1.0"
+description = "A web crawler for RAG search indexing"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "scrapy>=2.11.0",
+    "scrapy-splash>=0.8.0",
+    "markitdown[all]>=0.1.2",
+    "chromadb>=1.0.20",
+    "ollama>=0.5.3",
+    "strands-agents-tools>=0.2.4",
+    "strands-agents[ollama]>=1.5.0",
+]

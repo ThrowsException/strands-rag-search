@@ -1,0 +1,24 @@
+services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - '11434:11434'
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  chroma:
+    image: chromadb/chroma
+    volumes:
+      - chroma_data:/data
+    ports:
+      - "8000:8000"
+
+volumes:
+  chroma_data:
+    
