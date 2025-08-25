@@ -11,9 +11,6 @@ ollama_model = OllamaModel(
 )
 
 # Create an agent using the Ollama model
-
-
-
 agent = Agent(model=ollama_model, system_prompt="You are an expert marketer writing copy for businesses.")
 
 # Use the agent
