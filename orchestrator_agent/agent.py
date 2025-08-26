@@ -1,6 +1,18 @@
 from strands import Agent
 from customer_agent.agent import customer_assisstant
 from content_agent.agent import generate_content
+from local_model.model import model as qwen
+
+import logging
+
+# Configure the root strands logger
+logging.getLogger("strands").setLevel(logging.DEBUG)
+
+# Add a handler to see the logs
+logging.basicConfig(
+    format="%(levelname)s | %(name)s | %(message)s", 
+    handlers=[logging.StreamHandler()]
+)
 
 # Define the orchestrator system prompt with clear tool selection guidance
 MAIN_SYSTEM_PROMPT = """
@@ -17,10 +29,8 @@ your objective is to create and devlier personalized content to customers
 
 # Strands Agents SDK allows easy integration of agent tools
 orchestrator = Agent(
+    model=qwen,
     system_prompt=MAIN_SYSTEM_PROMPT,
     callback_handler=None,
     tools=[customer_assisstant, generate_content]
 )
-
-
-# orchestrator("create a new user 1234 Chester ONeill 100-111-1111 24 years old interested in finanical information")
