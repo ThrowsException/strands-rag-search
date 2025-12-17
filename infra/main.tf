@@ -18,6 +18,41 @@ provider "aws" {
   region = "us-east-1"
 }
 
+resource "aws_appsync_graphql_api" "graphql" {
+  authentication_type = "AWS_LAMBDA"
+  name                = "appsync-graphql"
+
+  lambda_authorizer_config {
+    authorizer_uri = aws_lambda_function.authorizer.arn
+  }
+
+  schema = <<EOF
+type Query {
+  helloWorld: HelloWorldResponse
+}
+
+type HelloWorldResponse {
+  message: MessageData!
+  timestamp: AWSDateTime!
+}
+
+type MessageData {
+  data: String!
+}
+EOF
+}
+
+resource "aws_appsync_api_key" "graphql_api_key" {
+  api_id  = aws_appsync_graphql_api.graphql.id
+  expires = timeadd(timestamp(), "8760h") # 1 year from now
+}
+
+resource "aws_ssm_parameter" "graphql_api_key" {
+  name        = "/appsync/graphql_api_key/api-key"
+  description = "API Key for Graphql Chat Events API"
+  type        = "SecureString"
+  value       = aws_appsync_api_key.graphql_api_key.key
+}
 
 resource "aws_appsync_api" "chat_events" {
   name = "example-event-api"
@@ -128,6 +163,18 @@ resource "aws_cloudfront_distribution" "appsync_distribution" {
   }
 
   origin {
+    domain_name = trimsuffix(trimprefix(aws_appsync_graphql_api.graphql.uris["GRAPHQL"], "https://"), "/graphql")
+    origin_id   = "appsync-graphql-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
     domain_name = replace(aws_appsync_api.chat_events.dns["REALTIME"], "wss://", "")
     origin_id   = "appsync-websocket-origin"
 
@@ -157,6 +204,27 @@ resource "aws_cloudfront_distribution" "appsync_distribution" {
     cache_policy_id            = aws_cloudfront_cache_policy.appsync_cache_policy.id
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.appsync_origin_request_policy.id
   }
+
+  ordered_cache_behavior {
+    path_pattern               = "/endpoint/*"
+    allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods             = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id           = "appsync-graphql-origin"
+    viewer_protocol_policy     = "https-only"
+    cache_policy_id            = aws_cloudfront_cache_policy.appsync_cache_policy.id
+    origin_request_policy_id   = aws_cloudfront_origin_request_policy.appsync_origin_request_policy.id
+  }
+
+   ordered_cache_behavior {
+    path_pattern               = "/graphql"
+    allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods             = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id           = "appsync-graphql-origin"
+    viewer_protocol_policy     = "https-only"
+    cache_policy_id            = aws_cloudfront_cache_policy.appsync_cache_policy.id
+    origin_request_policy_id   = aws_cloudfront_origin_request_policy.appsync_origin_request_policy.id
+  }
+
 
   restrictions {
     geo_restriction {
@@ -188,4 +256,20 @@ output "appsync_api_key_parameter" {
   value       = aws_ssm_parameter.appsync_api_key.name
   description = "SSM Parameter name containing the AppSync API key"
 }
+
+output "graphql_api_key_parameter" {
+  value       = aws_ssm_parameter.graphql_api_key.name
+  description = "SSM Parameter name containing the Graphql API key"
+}
+
+output "graphql_api_url" {
+  value       = aws_appsync_graphql_api.graphql.uris["GRAPHQL"]
+  description = "GraphQL API endpoint URL"
+}
+
+output "graphql_api_id" {
+  value       = aws_appsync_graphql_api.graphql.id
+  description = "GraphQL API ID"
+}
+
 
